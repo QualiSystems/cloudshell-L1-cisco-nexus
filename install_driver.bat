@@ -6,7 +6,7 @@ set DRIVER_PYTHON="%DRIVER_FOLDER%\Scripts\python.exe"
 set PACKAGES="%DRIVER_FOLDER%\packages"
 set QS_PYTHON_PATH="%DRIVER_FOLDER%\..\..\python"
 
-set QS_PYTHON_REGEXP="^2.7.*"
+set QS_PYTHON_REGEXP="^2.*"
 set QS_PYTHON=%1
 
 if not defined QS_PYTHON (
