@@ -117,14 +117,18 @@ class DriverCommands(DriverCommandsInterface):
 
         """
         with self.cli.config_mode_service() as session:
+            src = self._convert_port_address(src_port)
+            dst = self._convert_port_address(dst_port)
+            self._enable_port(session, src)
+            self._enable_port(session, dst)
             result = session.send_command("patch {src} {dst}".format(
-                src=self._convert_port_address(src_port),
-                dst=self._convert_port_address(dst_port)))
+                src=src,
+                dst=dst))
             if not re.search("patch created", result, re.IGNORECASE):
                 raise LayerOneDriverException(
                     "Failed to create mapping between {src} {dst}".format(
-                        src=self._convert_port_address(src_port),
-                        dst=self._convert_port_address(dst_port)))
+                        src=src,
+                        dst=dst))
 
     def map_uni(self, src_port, dst_ports):
         """
@@ -145,6 +149,8 @@ class DriverCommands(DriverCommandsInterface):
             for dst_port in dst_ports:
                 src = self._convert_port_address(src_port)
                 dst = self._convert_port_address(dst_port)
+                self._enable_port(session, src)
+                self._enable_port(session, dst)
                 result = session.send_command("tap {src} {dst}".format(
                     src=src,
                     dst=dst))
@@ -162,30 +168,6 @@ class DriverCommands(DriverCommandsInterface):
         :return: resource description
         :rtype: cloudshell.layer_one.core.response.response_info.ResourceDescriptionResponseInfo
         :raises cloudshell.layer_one.core.layer_one_driver_exception.LayerOneDriverException: Layer one exception.
-
-        Example:
-
-            from cloudshell.layer_one.core.response.resource_info.entities.chassis import Chassis
-            from cloudshell.layer_one.core.response.resource_info.entities.blade import Blade
-            from cloudshell.layer_one.core.response.resource_info.entities.port import Port
-
-            chassis_resource_id = chassis_info.get_id()
-            chassis_address = chassis_info.get_address()
-            chassis_model_name = "Cloudshell L1 Cisco Nexus Chassis"
-            chassis_serial_number = chassis_info.get_serial_number()
-            chassis = Chassis(resource_id, address, model_name, serial_number)
-
-            blade_resource_id = blade_info.get_id()
-            blade_model_name = 'Generic L1 Module'
-            blade_serial_number = blade_info.get_serial_number()
-            blade.set_parent_resource(chassis)
-
-            port_id = port_info.get_id()
-            port_serial_number = port_info.get_serial_number()
-            port = Port(port_id, 'Generic L1 Port', port_serial_number)
-            port.set_parent_resource(blade)
-
-            return ResourceDescriptionResponseInfo([chassis])
         """
         port_dict = {}
         Port.NAME_TEMPLATE = "{}"
@@ -224,6 +206,18 @@ class DriverCommands(DriverCommandsInterface):
                     src_port.add_mapping(dst_port)
 
         return ResourceDescriptionResponseInfo([chassis])
+
+    def _enable_port(self, session, port):
+        session.send_command("interface {}".format(port),
+                             remove_prompt=True)
+        session.send_command("no shutdown",
+                             remove_prompt=True)
+
+    def _disable_port(self, session, port):
+        session.send_command("interface {}".format(port),
+                             remove_prompt=True)
+        session.send_command("shutdown",
+                             remove_prompt=True)
 
     def _get_serial_number(self, session):
         serial_number = session.send_command("show version | grep Serial",
@@ -268,26 +262,23 @@ class DriverCommands(DriverCommandsInterface):
                 dst_port = self._get_bidi_mappings(session).get("src_port")
                 self._remove_bidi_mapping(session, src_port, dst_port)
                 self._remove_bidi_mapping(session, dst_port, src_port)
+                self._disable_port(session, src_port)
+                self._disable_port(session, dst_port)
                 dst_port = self._get_tap_mappings(session).get("src_port")
                 self._remove_tap_mapping(session, src_port, dst_port)
                 self._remove_tap_mapping(session, dst_port, src_port)
+                self._disable_port(session, dst_port)
 
     def map_clear_to(self, src_port, dst_ports):
         """
         Remove simplex/multi-cast/duplex connection ending on the destination port
         :param src_port: src port address, '192.168.42.240/1/21'
         :type src_port: str
-        :param dst_ports: list of dst ports addresses, ['192.168.42.240/1/21', '192.168.42.240/1/22']
+        :param dst_ports: list of dst ports addresses, ['192.168.42.240/1/21',
+                                                        '192.168.42.240/1/22']
         :type dst_ports: list
         :return: None
         :raises Exception: if command failed
-
-        Example:
-            with self._cli_handler.config_mode_service() as session:
-                _src_port = convert_port(src_port)
-                for port in dst_ports:
-                    _dst_port = convert_port(port)
-                    session.send_command('map clear-to {0} {1}'.format(_src_port, _dst_port))
         """
         with self.cli.config_mode_service() as session:
             for dst_port in dst_ports:
@@ -297,6 +288,8 @@ class DriverCommands(DriverCommandsInterface):
                 self._remove_bidi_mapping(session, dst, src)
                 self._remove_tap_mapping(session, src, dst)
                 self._remove_tap_mapping(session, dst, src)
+                self._disable_port(session, src)
+                self._disable_port(session, dst)
 
     def _remove_bidi_mapping(self, session, src_port, dst_port):
         result = session.send_command("no patch {src} {dst}".format(
@@ -329,12 +322,6 @@ class DriverCommands(DriverCommandsInterface):
         :return: attribute value
         :rtype: cloudshell.layer_one.core.response.response_info.AttributeValueResponseInfo
         :raises Exception: if command failed
-
-        Example:
-            with self._cli_handler.config_mode_service() as session:
-                command = AttributeCommandFactory.get_attribute_command(cs_address, attribute_name)
-                value = session.send_command(command)
-                return AttributeValueResponseInfo(value)
         """
         if attribute_name == "Serial Number":
             if len(cs_address.split("/")) == 1:
@@ -356,12 +343,6 @@ class DriverCommands(DriverCommandsInterface):
         :return: attribute value
         :rtype: cloudshell.layer_one.core.response.response_info.AttributeValueResponseInfo
         :raises Exception: if command failed
-
-        Example:
-            with self._cli_handler.config_mode_service() as session:
-                command = AttributeCommandFactory.set_attribute_command(cs_address, attribute_name, attribute_value)
-                session.send_command(command)
-                return AttributeValueResponseInfo(attribute_value)
         """
         raise NotImplementedError
 
@@ -399,34 +380,3 @@ class DriverCommands(DriverCommandsInterface):
         :return:
         """
         return port.split("/")[-1].replace("-", "/")
-
-
-if __name__ == "__main__":
-    import logging
-    from cloudshell.logging.qs_logger import get_qs_logger
-    from mock import Mock
-
-    _logger = get_qs_logger()
-    _runtime_config_instance = Mock()
-    _runtime_config_instance.read_key.side_effect = [["SSH", "TELNET"], {"SSH": 22,
-                                                                         "TELNET": 23}]
-    driver = DriverCommands(_logger, _runtime_config_instance)
-    driver.login("192.168.23.10", "admin", "admin")
-    # response = driver.get_resource_description("192.168.23.10")
-    result = driver.map_clear_to('192.168.23.10/ethernet30-3',
-                                 ['192.168.23.10/ethernet31-3'])
-    response = driver.map_bidi('192.168.23.10/ethernet30-3',
-                               '192.168.23.10/ethernet31-3')
-    result1 = driver.map_clear_to('192.168.23.10/ethernet30-3',
-                                 ['192.168.23.10/ethernet31-3'])
-    result2 = driver.map_clear_to('192.168.23.10/ethernet30-1',
-                                  ['192.168.23.10/ethernet31-1',
-                                   '192.168.23.10/ethernet31-2'])
-    response1 = driver.map_uni('192.168.23.10/ethernet30-1',
-                               ['192.168.23.10/ethernet31-1',
-                                '192.168.23.10/ethernet31-2'])
-    result3 = driver.map_clear_to('192.168.23.10/ethernet30-1',
-                                  ['192.168.23.10/ethernet31-1',
-                                   '192.168.23.10/ethernet31-2']
-                                  )
-    print()
