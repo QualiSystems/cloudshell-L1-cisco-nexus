@@ -3,7 +3,7 @@ from unittest import TestCase
 from mock import Mock
 
 from cloudshell.layer_one.core.driver_commands_interface import DriverCommandsInterface
-from cisco_nexus_l1.driver_commands import DriverCommands
+from cisco_nexus.driver_commands import DriverCommands
 
 
 

@@ -7,7 +7,8 @@ PACKAGE_FILES:               # Files will be added to the driver's package zip
   - requirements.txt
   - version.txt
   - INSTALL.txt
-  - cloudshell_l1_cisco_nexus_runtime_config.yml
+  - cisco_nexus_runtime_config.yml
+  - venv_requirements.txt
   - package_config.yml
   - cloudshell_logo.png
 #  - test_requirements.txt

@@ -51,4 +51,4 @@ class Main(object):
 
 
 if __name__ == '__main__':
-    Main(*sys.argv).run_driver('cisco_nexus_l1')
+    Main(*sys.argv).run_driver('cisco_nexus')

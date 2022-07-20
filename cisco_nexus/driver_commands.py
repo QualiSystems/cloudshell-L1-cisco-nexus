@@ -9,7 +9,7 @@ from cloudshell.layer_one.core.response.resource_info.entities.port import Port
 from cloudshell.layer_one.core.response.response_info import GetStateIdResponseInfo, \
     ResourceDescriptionResponseInfo, AttributeValueResponseInfo
 
-from cisco_nexus_l1.cli.cli_handler import CiscoL1CliHandler
+from cisco_nexus.cli.cli_handler import CiscoL1CliHandler
 
 
 class CiscoL1ResourceConfig:

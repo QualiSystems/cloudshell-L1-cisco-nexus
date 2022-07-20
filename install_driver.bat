@@ -19,8 +19,9 @@ if not defined QS_PYTHON set QS_PYTHON="python.exe"
 
 echo "Python: %QS_PYTHON%"
 
-if not exist %DRIVER_PYTHON% %QS_PYTHON% -m virtualenv --system-site-packages "%DRIVER_FOLDER%\"
-%DRIVER_PYTHON% -m pip install --upgrade pip
+if not exist %DRIVER_PYTHON% if exist %PACKAGES%  %QS_PYTHON% -m virtualenv --extra-search-dir=%PACKAGES% --system-site-packages "%DRIVER_FOLDER%\"
+if not exist %DRIVER_PYTHON% %QS_PYTHON% -m virtualenv --extra-search-dir=%PACKAGES% --system-site-packages "%DRIVER_FOLDER%\"
+
 if exist %PACKAGES% %DRIVER_PYTHON% -m pip install -r "%DRIVER_FOLDER%\requirements.txt" --no-index -f %PACKAGES%
 if not exist %PACKAGES% %DRIVER_PYTHON% -m pip install -r "%DRIVER_FOLDER%\requirements.txt"
 copy "%DRIVER_FOLDER%\driver_exe_template" "%DRIVER_FOLDER%\..\%DRIVER_NAME%.exe"
