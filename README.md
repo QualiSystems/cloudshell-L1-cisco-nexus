@@ -1,7 +1,7 @@
 
 ![](cloudshell_logo.png)
 
-# **Cloudshell L1 Cisco Nexus L1 Shell**
+# **Cloudshell Cisco Nexus L1 Shell**
 
 Release date: July 2022 
 
