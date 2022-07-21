@@ -174,8 +174,13 @@ class DriverCommands(DriverCommandsInterface):
         with self.cli.config_mode_service() as session:
 
             model = "Cisco L1 Nexus Chassis"
-
-            chassis = Chassis(0, address, model, self._get_serial_number(session))
+            serial = self._get_serial_number(session)
+            model_name = self._get_model_name(session)
+            os_version = self._get_os_version(session)
+            chassis = Chassis(0, address, model, serial)
+            chassis.set_serial_number(serial)
+            chassis.set_model_name(model_name)
+            chassis.set_os_version(os_version)
             ports_out = session.send_command("show interface brief")
             port_match = re.findall(r"(?P<iface>et.+?)\s+"
                                     r"(?P<status>\w+)\s+"
@@ -222,8 +227,21 @@ class DriverCommands(DriverCommandsInterface):
     def _get_serial_number(self, session):
         serial_number = session.send_command("show version | grep Serial",
                                              remove_prompt=True)
-        return re.sub("serial\s+number\s+|\n$", "", serial_number, flags=(
+        result = re.sub("serial\s+number\s+|\n$", "", serial_number, flags=(
             re.IGNORECASE))
+        return str(result)
+
+    def _get_model_name(self, session):
+        result = session.send_command("show version | head -1",
+                                      remove_prompt=True)
+        return str(result).strip(" \r\t\n")
+
+    def _get_os_version(self, session):
+        os_version = session.send_command("show version | grep 'System version'",
+                                          remove_prompt=True)
+        result = re.sub("system\s+version\s+|\n$", "", os_version, flags=(
+            re.IGNORECASE))
+        return str(result)
 
     def _get_bidi_mappings(self, session):
         mappings = session.send_command("show config running-config patch")
@@ -380,3 +398,34 @@ class DriverCommands(DriverCommandsInterface):
         :return:
         """
         return port.split("/")[-1].replace("-", "/")
+
+
+if __name__ == "__main__":
+    import logging
+    from cloudshell.logging.qs_logger import get_qs_logger
+    from mock import Mock
+
+    _logger = get_qs_logger()
+    _runtime_config_instance = Mock()
+    _runtime_config_instance.read_key.side_effect = [["SSH", "TELNET"], {"SSH": 22,
+                                                                         "TELNET": 23}]
+    driver = DriverCommands(_logger, _runtime_config_instance)
+    driver.login("192.168.23.10", "admin", "admin")
+    response = driver.get_resource_description("192.168.23.10")
+    # result = driver.map_clear_to('192.168.23.10/ethernet30-3',
+    #                              ['192.168.23.10/ethernet31-3'])
+    # response = driver.map_bidi('192.168.23.10/ethernet30-3',
+    #                            '192.168.23.10/ethernet31-3')
+    # result1 = driver.map_clear_to('192.168.23.10/ethernet30-3',
+    #                               ['192.168.23.10/ethernet31-3'])
+    # result2 = driver.map_clear_to('192.168.23.10/ethernet30-1',
+    #                               ['192.168.23.10/ethernet31-1',
+    #                                '192.168.23.10/ethernet31-2'])
+    # response1 = driver.map_uni('192.168.23.10/ethernet30-1',
+    #                            ['192.168.23.10/ethernet31-1',
+    #                             '192.168.23.10/ethernet31-2'])
+    # result3 = driver.map_clear_to('192.168.23.10/ethernet30-1',
+    #                               ['192.168.23.10/ethernet31-1',
+    #                                '192.168.23.10/ethernet31-2']
+    #                               )
+    print("!")
